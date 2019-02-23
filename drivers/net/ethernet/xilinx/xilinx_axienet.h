@@ -70,15 +70,19 @@
 
 /* Axi DMA Register definitions */
 
-#define XAXIDMA_TX_CR_OFFSET	0x00000000 /* Channel control */
-#define XAXIDMA_TX_SR_OFFSET	0x00000004 /* Status */
-#define XAXIDMA_TX_CDESC_OFFSET	0x00000008 /* Current descriptor pointer */
-#define XAXIDMA_TX_TDESC_OFFSET	0x00000010 /* Tail descriptor pointer */
+#define XAXIDMA_TX_CR_OFFSET		0x00000000 /* Channel control */
+#define XAXIDMA_TX_SR_OFFSET		0x00000004 /* Status */
+#define XAXIDMA_TX_CDESC_OFFSET		0x00000008 /* Current descriptor pointer */
+#define XAXIDMA_TX_CDESCHI_OFFSET	0x0000000C
+#define XAXIDMA_TX_TDESC_OFFSET		0x00000010 /* Tail descriptor pointer */
+#define XAXIDMA_TX_TDESCHI_OFFSET	0x00000014
 
-#define XAXIDMA_RX_CR_OFFSET	0x00000030 /* Channel control */
-#define XAXIDMA_RX_SR_OFFSET	0x00000034 /* Status */
-#define XAXIDMA_RX_CDESC_OFFSET	0x00000038 /* Current descriptor pointer */
-#define XAXIDMA_RX_TDESC_OFFSET	0x00000040 /* Tail descriptor pointer */
+#define XAXIDMA_RX_CR_OFFSET		0x00000030 /* Channel control */
+#define XAXIDMA_RX_SR_OFFSET		0x00000034 /* Status */
+#define XAXIDMA_RX_CDESC_OFFSET		0x00000038 /* Current descriptor pointer */
+#define XAXIDMA_RX_CDESCHI_OFFSET	0x0000003C
+#define XAXIDMA_RX_TDESC_OFFSET		0x00000040 /* Tail descriptor pointer */
+#define XAXIDMA_RX_TDESCHI_OFFSET	0x00000044
 
 #define XAXIDMA_CR_RUNSTOP_MASK	0x00000001 /* Start/stop DMA channel */
 #define XAXIDMA_CR_RESET_MASK	0x00000004 /* Reset DMA engine */
@@ -341,6 +345,14 @@
 
 #define DELAY_OF_ONE_MILLISEC		1000
 
+#ifndef in_be32
+#define in_be32(a) ioread32be(a)
+#endif
+
+#ifndef out_be32
+#define out_be32(a, b) iowrite32be(b, a)
+#endif
+
 /**
  * struct axidma_bd - Axi Dma buffer descriptor layout
  * @next:         MM2S/S2MM Next Descriptor Pointer
@@ -362,9 +374,9 @@
  */
 struct axidma_bd {
 	u32 next;	/* Physical address of next buffer descriptor */
-	u32 reserved1;
+	u32 next_hi;
 	u32 phys;
-	u32 reserved2;
+	u32 phys_hi;
 	u32 reserved3;
 	u32 reserved4;
 	u32 cntrl;
@@ -375,7 +387,7 @@ struct axidma_bd {
 	u32 app3;
 	u32 app4;
 	u32 sw_id_offset;
-	u32 reserved5;
+	u32 sw_id_offset_hi;
 	u32 reserved6;
 };
 
