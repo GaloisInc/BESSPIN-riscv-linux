@@ -7,7 +7,7 @@
  * Copyright (c) 2010 - 2011 PetaLogix
  * Copyright (c) 2010 - 2012 Xilinx, Inc. All rights reserved.
  */
-#define DEBUG
+//#define DEBUG
 #include <linux/of_address.h>
 #include <linux/of_mdio.h>
 #include <linux/jiffies.h>
