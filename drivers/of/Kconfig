@@ -82,7 +82,7 @@ config OF_MDIO
 
 config OF_RESERVED_MEM
 	depends on OF_EARLY_FLATTREE
-	bool
+	bool "Reserved Memory"
 	help
 	  Helpers to allow for reservation of memory regions
 
