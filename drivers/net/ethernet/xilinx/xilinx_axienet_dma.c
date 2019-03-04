@@ -12,8 +12,9 @@
  *
  * This file contains helper functions for AXI DMA TX and RX programming.
  */
-
+#define DEBUG 1
 #include "xilinx_axienet.h"
+#include <linux/of_reserved_mem.h>
 
 /**
  * axienet_bd_free - Release buffer descriptor rings for individual dma queue
@@ -30,8 +31,8 @@ void __maybe_unused axienet_bd_free(struct net_device *ndev,
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	for (i = 0; i < RX_BD_NUM; i++) {
-		dma_unmap_single(ndev->dev.parent, q->rx_bd_v[i].phys,
-				 lp->max_frm_size, DMA_FROM_DEVICE);
+//		dma_unmap_single(ndev->dev.parent, q->rx_bd_v[i].phys,
+//				 lp->max_frm_size, DMA_FROM_DEVICE);
 		dev_kfree_skb((struct sk_buff *)
 			      (q->rx_bd_v[i].sw_id_offset));
 	}
@@ -71,26 +72,35 @@ static int __dma_txq_init(struct net_device *ndev, struct axienet_dma_q *q)
 	u32 cr;
 	struct axienet_local *lp = netdev_priv(ndev);
 
+	int rc = of_reserved_mem_device_init(ndev->dev.parent);
+	if (rc) {
+		dev_err(ndev->dev.parent, "Could not get reserved memory\n");
+	}
+
 	q->tx_bd_ci = 0;
 	q->tx_bd_tail = 0;
 
+	printk(KERN_INFO "DMA Tx Init size = %d\n", (int) sizeof(*q->tx_bd_v));
 	q->tx_bd_v = dma_zalloc_coherent(ndev->dev.parent,
 					 sizeof(*q->tx_bd_v) * TX_BD_NUM,
-					 &q->tx_bd_p, GFP_KERNEL);
+					 &q->tx_bd_p, GFP_KERNEL | GFP_DMA);
+	printk(KERN_INFO "DMA Tx Init addr = 0x%x\n", q->tx_bd_p);
 	if (!q->tx_bd_v)
 		goto out;
 
+	printk(KERN_INFO "DMA Tx Init\n");
 	for (i = 0; i < TX_BD_NUM; i++) {
 		q->tx_bd_v[i].next = q->tx_bd_p +
 				     sizeof(*q->tx_bd_v) *
 				     ((i + 1) % TX_BD_NUM);
 	}
 
+	printk(KERN_INFO "DMA Tx Init\n");
 	if (!q->eth_hasdre) {
 		q->tx_bufs = dma_zalloc_coherent(ndev->dev.parent,
 						 XAE_MAX_PKT_LEN * TX_BD_NUM,
 						 &q->tx_bufs_dma,
-						 GFP_KERNEL);
+						 GFP_KERNEL | GFP_DMA);
 		if (!q->tx_bufs)
 			goto out;
 
@@ -98,6 +108,7 @@ static int __dma_txq_init(struct net_device *ndev, struct axienet_dma_q *q)
 			q->tx_buf[i] = &q->tx_bufs[i * XAE_MAX_PKT_LEN];
 	}
 
+	printk(KERN_INFO "DMA Tx Init\n");
 	/* Start updating the Tx channel control register */
 	cr = axienet_dma_in32(q, XAXIDMA_TX_CR_OFFSET);
 	/* Update the interrupt coalesce count */
@@ -111,6 +122,7 @@ static int __dma_txq_init(struct net_device *ndev, struct axienet_dma_q *q)
 	/* Write to the Tx channel control register */
 	axienet_dma_out32(q, XAXIDMA_TX_CR_OFFSET, cr);
 
+	printk(KERN_INFO "DMA Tx Init\n");
 	/* Write to the RS (Run-stop) bit in the Tx channel control register.
 	 * Tx channel is now ready to run. But only after we write to the
 	 * tail pointer register that the Tx channel will start transmitting.
@@ -119,6 +131,7 @@ static int __dma_txq_init(struct net_device *ndev, struct axienet_dma_q *q)
 	cr = axienet_dma_in32(q, XAXIDMA_TX_CR_OFFSET);
 	axienet_dma_out32(q, XAXIDMA_TX_CR_OFFSET,
 			  cr | XAXIDMA_CR_RUNSTOP_MASK);
+	printk(KERN_INFO "DMA Tx Done\n");
 	return 0;
 out:
 	return -ENOMEM;
@@ -140,13 +153,19 @@ static int __dma_rxq_init(struct net_device *ndev,
 	u32 cr;
 	struct sk_buff *skb;
 	struct axienet_local *lp = netdev_priv(ndev);
+
+	int rc = of_reserved_mem_device_init(ndev->dev.parent);
+	if (rc) {
+		dev_err(ndev->dev.parent, "Could not get reserved memory\n");
+	}
 	/* Reset the indexes which are used for accessing the BDs */
 	q->rx_bd_ci = 0;
+	printk(KERN_INFO "DMA Rx Init\n");
 
 	/* Allocate the Rx buffer descriptors. */
 	q->rx_bd_v = dma_zalloc_coherent(ndev->dev.parent,
 					 sizeof(*q->rx_bd_v) * RX_BD_NUM,
-					 &q->rx_bd_p, GFP_KERNEL);
+					 &q->rx_bd_p, GFP_KERNEL | GFP_DMA);
 	if (!q->rx_bd_v)
 		goto out;
 
@@ -165,10 +184,12 @@ static int __dma_rxq_init(struct net_device *ndev,
 		wmb();
 
 		q->rx_bd_v[i].sw_id_offset = (phys_addr_t)skb;
-		q->rx_bd_v[i].phys = dma_map_single(ndev->dev.parent,
-						    skb->data,
-						    lp->max_frm_size,
-						    DMA_FROM_DEVICE);
+		q->rx_bd_v[i].phys = 0xaa000000 + i*lp->max_frm_size;
+//		q->rx_bd_v[i].phys = dma_map_single(ndev->dev.parent,
+//						    skb->data,
+//						    lp->max_frm_size,
+//						    DMA_FROM_DEVICE);
+		printk(KERN_INFO "rx buf = 0x%x\n", q->rx_bd_v[i].phys);
 		q->rx_bd_v[i].cntrl = lp->max_frm_size;
 	}
 
@@ -194,6 +215,7 @@ static int __dma_rxq_init(struct net_device *ndev,
 			  cr | XAXIDMA_CR_RUNSTOP_MASK);
 	axienet_dma_bdout(q, XAXIDMA_RX_TDESC_OFFSET, q->rx_bd_p +
 			  (sizeof(*q->rx_bd_v) * (RX_BD_NUM - 1)));
+	printk(KERN_INFO "DMA Rx Done\n");
 
 	return 0;
 out:
@@ -270,6 +292,8 @@ irqreturn_t __maybe_unused axienet_tx_irq(int irq, void *_ndev)
 	q = lp->dq[i];
 
 	status = axienet_dma_in32(q, XAXIDMA_TX_SR_OFFSET);
+	printk(KERN_INFO "DMA TX status = 0x%x\n", status);
+//	mdelay(5000);
 	if (status & (XAXIDMA_IRQ_IOC_MASK | XAXIDMA_IRQ_DELAY_MASK)) {
 		axienet_dma_out32(q, XAXIDMA_TX_SR_OFFSET, status);
 		axienet_start_xmit_done(lp->ndev, q);
@@ -326,6 +350,7 @@ irqreturn_t __maybe_unused axienet_rx_irq(int irq, void *_ndev)
 		return IRQ_NONE;
 
 	q = lp->dq[i];
+	printk(KERN_INFO "DMA Rx Interrupt");
 
 	status = axienet_dma_in32(q, XAXIDMA_RX_SR_OFFSET);
 	if (status & (XAXIDMA_IRQ_IOC_MASK | XAXIDMA_IRQ_DELAY_MASK)) {
