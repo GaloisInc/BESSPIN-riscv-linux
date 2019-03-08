@@ -502,6 +502,7 @@
 
 /* Macros used when AXI DMA h/w is configured without DRE */
 #define XAE_TX_BUFFERS		64
+#define XAE_RX_BUFFERS		64
 #define XAE_MAX_PKT_LEN		8192
 
 /**
@@ -814,8 +815,11 @@ struct axienet_dma_q {
 	dma_addr_t tx_bd_p;
 
 	unsigned char *tx_buf[XAE_TX_BUFFERS];
+	unsigned char *rx_buf[XAE_RX_BUFFERS];
 	unsigned char *tx_bufs;
+	unsigned char *rx_bufs;
 	dma_addr_t tx_bufs_dma;
+	dma_addr_t rx_bufs_dma;
 	bool eth_hasdre;
 
 	u32 tx_bd_ci;

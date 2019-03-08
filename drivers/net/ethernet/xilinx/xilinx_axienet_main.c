@@ -1104,7 +1104,7 @@ int axienet_queue_xmit(struct sk_buff *skb, struct net_device *ndev, u16 map)
 
 	if (!q->eth_hasdre &&
 	    (((phys_addr_t)skb->data & 0x3) || (num_frag > 0))) {
-		printk(KERN_INFO "copying rx... skb->data = 0x%x\n", skb->data);
+		printk(KERN_INFO "copying tx... skb->data = 0x%x\n", skb->data);
 		skb_copy_and_csum_dev(skb, q->tx_buf[q->tx_bd_tail]);
 
 		cur_p->phys = q->tx_bufs_dma +
@@ -1244,9 +1244,12 @@ static int axienet_recv(struct net_device *ndev, int budget,
 		else
 			length = cur_p->app4 & 0x0000FFFF;
 
-		dma_unmap_single(ndev->dev.parent, cur_p->phys,
-				 lp->max_frm_size,
-				 DMA_FROM_DEVICE);
+//		dma_unmap_single(ndev->dev.parent, cur_p->phys,
+//				 lp->max_frm_size,
+//				 DMA_FROM_DEVICE);
+
+		skb_copy_from_linear_data(skb, q->rx_buf[q->rx_bd_ci], length);
+
 
 		skb_put(skb, length);
 #ifdef CONFIG_XILINX_AXI_EMAC_HWTSTAMP
@@ -1320,9 +1323,9 @@ static int axienet_recv(struct net_device *ndev, int budget,
 		 */
 		wmb();
 
-		cur_p->phys = dma_map_single(ndev->dev.parent, new_skb->data,
-					     lp->max_frm_size,
-					     DMA_FROM_DEVICE);
+//		cur_p->phys = dma_map_single(ndev->dev.parent, new_skb->data,
+//					     lp->max_frm_size,
+//					     DMA_FROM_DEVICE);
 		cur_p->cntrl = lp->max_frm_size;
 		cur_p->status = 0;
 		cur_p->sw_id_offset = (phys_addr_t)new_skb;
