@@ -19,7 +19,7 @@
  *  - Test basic VLAN support.
  *  - Add support for extended VLAN support.
  */
-
+#define DEBUG
 #include <linux/delay.h>
 #include <linux/etherdevice.h>
 #include <linux/module.h>
@@ -30,6 +30,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/of_net.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/skbuff.h>
 #include <linux/spinlock.h>
 #include <linux/phy.h>
@@ -1103,6 +1104,7 @@ int axienet_queue_xmit(struct sk_buff *skb, struct net_device *ndev, u16 map)
 
 	if (!q->eth_hasdre &&
 	    (((phys_addr_t)skb->data & 0x3) || (num_frag > 0))) {
+		printk(KERN_INFO "copying rx... skb->data = 0x%x\n", skb->data);
 		skb_copy_and_csum_dev(skb, q->tx_buf[q->tx_bd_tail]);
 
 		cur_p->phys = q->tx_bufs_dma +
@@ -1503,7 +1505,7 @@ static int axienet_mii_init(struct net_device *ndev)
 	ret = axienet_mdio_wait_until_ready(lp);
 	if (ret < 0)
 		return ret;
-
+	lp->mii_bus->write(lp->mii_bus, 0x1, 0x0, 0x1340);
 	return 0;
 }
 
@@ -2597,6 +2599,12 @@ static int axienet_probe(struct platform_device *pdev)
 	if (ret || (lp->num_tc != 2 && lp->num_tc != 3))
 		lp->num_tc = XAE_MAX_TSN_TC;
 #endif
+
+	/* Get reserved memory region */
+	int rc = of_reserved_mem_device_init(ndev->dev.parent);
+	if (rc) {
+		dev_err(ndev->dev.parent, "Could not get reserved memory\n");
+	}
 
 	/* Map device registers */
 	ethres = platform_get_resource(pdev, IORESOURCE_MEM, 0);

@@ -19,6 +19,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/phy.h>
+#include <linux/delay.h>
 
 #include <dt-bindings/net/ti-dp83867.h>
 
@@ -313,6 +314,31 @@ static int dp83867_config_init(struct phy_device *phydev)
 		val |= (dp83867->clk_output_sel << DP83867_IO_MUX_CFG_CLK_O_SEL_SHIFT);
 		phy_write_mmd(phydev, DP83867_DEVADDR, DP83867_IO_MUX_CFG, val);
 	}
+
+	phy_write(phydev, 0xD, 0x1F);
+	phy_write(phydev, 0xE, 0xD3);
+	phy_write(phydev, 0xD, 0x401F);
+	phy_write(phydev, 0xE, 0x4000);
+	phy_write(phydev, 0xD, 0x1F);
+	phy_write(phydev, 0xE, 0x32);
+	phy_write(phydev, 0xD, 0x401F);
+	phy_write(phydev, 0xE, 0x0);
+
+	phy_write(phydev, 0x10, 0x0800);
+	phy_write(phydev, 0x14, 0x29c7);
+	// Need to work around quirk
+	phy_write(phydev, 0xD, 0x1F);
+	phy_write(phydev, 0xE, 0x31);
+	phy_write(phydev, 0xD, 0x401F);
+	phy_write(phydev, 0xE, 0xf0);
+	phy_write(phydev, 0xD, 0x1F);
+	phy_write(phydev, 0xE, 0x31);
+	phy_write(phydev, 0xD, 0x401F);
+	phy_write(phydev, 0xE, 0x160);
+	mdelay(1);
+	phy_write(phydev, 0x0, 0x9140);
+	//printk(KERN_INFO "Setup SGMII clock for TI device\n");
+	mdelay(4);
 
 	return 0;
 }
