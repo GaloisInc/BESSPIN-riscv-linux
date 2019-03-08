@@ -19,7 +19,6 @@
  *  - Test basic VLAN support.
  *  - Add support for extended VLAN support.
  */
-#define DEBUG
 #include <linux/delay.h>
 #include <linux/etherdevice.h>
 #include <linux/module.h>
@@ -1104,7 +1103,7 @@ int axienet_queue_xmit(struct sk_buff *skb, struct net_device *ndev, u16 map)
 
 	if (!q->eth_hasdre &&
 	    (((phys_addr_t)skb->data & 0x3) || (num_frag > 0))) {
-		printk(KERN_INFO "copying tx... skb->data = 0x%x\n", skb->data);
+		//printk(KERN_INFO "copying tx... skb->data = 0x%x\n", skb->data);
 		skb_copy_and_csum_dev(skb, q->tx_buf[q->tx_bd_tail]);
 
 		cur_p->phys = q->tx_bufs_dma +
@@ -1248,7 +1247,8 @@ static int axienet_recv(struct net_device *ndev, int budget,
 //				 lp->max_frm_size,
 //				 DMA_FROM_DEVICE);
 
-		skb_copy_from_linear_data(skb, q->rx_buf[q->rx_bd_ci], length);
+		//printk(KERN_INFO "Rx copying 0x%x from 0x%x\n", length, q->rx_buf[q->rx_bd_ci]);
+		skb_copy_to_linear_data(skb, q->rx_buf[q->rx_bd_ci], length);
 
 
 		skb_put(skb, length);
@@ -2433,8 +2433,12 @@ static int __maybe_unused axienet_dma_probe(struct platform_device *pdev,
 								&dmares);
 			else
 				return -ENODEV;
-			q->eth_hasdre = of_property_read_bool(np,
-							"xlnx,include-dre");
+			/* Current changes for DMA preclude the use of the DRE
+ 			functionality. Ignore this setting, but give a warning */
+			if(of_property_read_bool(np, "xlnx,include-dre"))
+				pr_err("DRE support is currently disabled in this version of the axienet driver!\n");	
+			q->eth_hasdre = 0; /* of_property_read_bool(np,
+							"xlnx,include-dre"); */
 		} else {
 			return -EINVAL;
 		}
@@ -2604,8 +2608,7 @@ static int axienet_probe(struct platform_device *pdev)
 #endif
 
 	/* Get reserved memory region */
-	int rc = of_reserved_mem_device_init(ndev->dev.parent);
-	if (rc) {
+	if (of_reserved_mem_device_init(ndev->dev.parent)) {
 		dev_err(ndev->dev.parent, "Could not get reserved memory\n");
 	}
 

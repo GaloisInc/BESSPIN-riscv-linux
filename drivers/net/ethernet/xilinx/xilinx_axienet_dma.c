@@ -12,7 +12,7 @@
  *
  * This file contains helper functions for AXI DMA TX and RX programming.
  */
-#define DEBUG 1
+//#define DEBUG 1
 #include "xilinx_axienet.h"
 #include <linux/of_reserved_mem.h>
 
@@ -31,6 +31,7 @@ void __maybe_unused axienet_bd_free(struct net_device *ndev,
 	struct axienet_local *lp = netdev_priv(ndev);
 
 	for (i = 0; i < RX_BD_NUM; i++) {
+		/* No longer necessary with DMA-related changes */
 //		dma_unmap_single(ndev->dev.parent, q->rx_bd_v[i].phys,
 //				 lp->max_frm_size, DMA_FROM_DEVICE);
 		dev_kfree_skb((struct sk_buff *)
@@ -57,9 +58,9 @@ void __maybe_unused axienet_bd_free(struct net_device *ndev,
 	}
 	if (q->rx_bufs) {
 		dma_free_coherent(ndev->dev.parent,
-						  lp->max_frm_size * RX_BD_NUM,
-						  q->rx_bufs,
-						  q->rx_bufs_dma);
+				  lp->max_frm_size * RX_BD_NUM,
+				  q->rx_bufs,
+				  q->rx_bufs_dma);
 	}
 }
 
@@ -162,13 +163,13 @@ static int __dma_rxq_init(struct net_device *ndev,
 	if (!q->rx_bd_v)
 		goto out;
 
-    q->rx_bufs = dma_zalloc_coherent(ndev->dev.parent,
+	q->rx_bufs = dma_zalloc_coherent(ndev->dev.parent,
                                      lp->max_frm_size * RX_BD_NUM,
                                      &q->rx_bufs_dma,
                                      GFP_KERNEL | GFP_DMA);
 
-    if (!q->rx_bufs)
-        goto out;
+	if (!q->rx_bufs)
+		goto out;
 
 	for (i = 0; i < RX_BD_NUM; i++) {
 		/* Save the virtual address of each buffer */
@@ -189,7 +190,7 @@ static int __dma_rxq_init(struct net_device *ndev,
 
 		q->rx_bd_v[i].sw_id_offset = (phys_addr_t)skb;
 		q->rx_bd_v[i].phys = q->rx_bufs_dma + (i * lp->max_frm_size);
-		printk(KERN_INFO "skb addr = 0x%x | rx buf = 0x%x\n", skb->data, q->rx_bd_v[i].phys);
+		//printk(KERN_INFO "skb addr = 0x%x | rx buf = 0x%x\n", skb->data, q->rx_bd_v[i].phys);
 		q->rx_bd_v[i].cntrl = lp->max_frm_size;
 	}
 

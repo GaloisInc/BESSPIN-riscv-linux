@@ -131,6 +131,7 @@ int axienet_mdio_setup(struct axienet_local *lp, struct device_node *np)
 {
 	int ret;
 	u32 clk_div, host_clock;
+	u32 phyreg0;
 
 	struct mii_bus *bus;
 	struct resource res;
@@ -234,7 +235,6 @@ int axienet_mdio_setup(struct axienet_local *lp, struct device_node *np)
 	mdelay(4);
 
 	// Configure Internal PHY
-	u32 phyreg0;
 	phyreg0 = axienet_mdio_read(bus, 0x1, 0x0);
 	while (phyreg0 == 0xffff) {
 		mdelay(1);

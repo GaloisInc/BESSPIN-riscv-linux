@@ -28,8 +28,8 @@
 #define XAE_MAX_JUMBO_FRAME_SIZE (XAE_JUMBO_MTU + XAE_HDR_SIZE + XAE_TRL_SIZE)
 
 /* Descriptors defines for Tx and Rx DMA - 2^n for the best performance */
-#define TX_BD_NUM		4
-#define RX_BD_NUM		16
+#define TX_BD_NUM		32
+#define RX_BD_NUM		32
 
 /* In AXI DMA Tx and Rx queue count is same */
 #define for_each_tx_dma_queue(lp, var) \
