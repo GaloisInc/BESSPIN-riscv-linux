@@ -717,6 +717,7 @@ enum axienet_tsn_ioctl {
  * @chan_id:  MCMDA Channel id used in conjunction with weight parameter.
  * @weight:   MCDMA Channel weight value to be configured for.
  * @usxgmii_rate: USXGMII PHY speed.
+ * @is_vcu118: Is this implemented on a VCU118 (or similar).
  */
 struct axienet_local {
 	struct net_device *ndev;
@@ -799,6 +800,7 @@ struct axienet_local {
 
 	u32 usxgmii_rate;
 	u32 phy_addr;
+	bool is_vcu118;
 };
 
 /**

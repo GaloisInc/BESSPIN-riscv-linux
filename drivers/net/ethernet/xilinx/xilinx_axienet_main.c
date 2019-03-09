@@ -1647,9 +1647,11 @@ static int axienet_open(struct net_device *ndev)
 		if (!phydev) {
 			dev_err(lp->dev, "of_phy_connect() failed\n");
 		} else {
-			ret = axienet_fix_ti_quirk(lp, phydev);
-			if (ret < 0)
-				goto err_ti_quirk;
+			if (lp->is_vcu118) {
+				ret = axienet_fix_ti_quirk(lp, phydev);
+				if (ret < 0)
+					goto err_ti_quirk;
+			}
 			phy_start(phydev);
 		}
 	}
@@ -2526,8 +2528,9 @@ static int __maybe_unused axienet_dma_probe(struct platform_device *pdev,
 				return -ENODEV;
 			/* Current changes for DMA preclude the use of the DRE
  			functionality. Ignore this setting, but give a warning */
-			if(of_property_read_bool(np, "xlnx,include-dre"))
-				pr_err("DRE support is currently disabled in this version of the axienet driver!\n");	
+			if (of_property_read_bool(np, "xlnx,include-dre"))
+				dev_err(&pdev->dev,
+			"DRE support is currently disabled in this version of the axienet driver!\n");	
 			q->eth_hasdre = 0; /* of_property_read_bool(np,
 							"xlnx,include-dre"); */
 		} else {
@@ -2792,9 +2795,15 @@ static int axienet_probe(struct platform_device *pdev)
 	/* The phyaddr is optional but default is 1. This is the internal "PHY"
  	 * in the PCS/PMA or SGMII block. It is sometimes necessary to access
  	 * this internal block directly when using an external PHY chip
+ 	 *
+ 	 * "xlnx,vcu118" indicates the board needs special bringup
  	 */
 	lp->phy_addr = 1;
 	of_property_read_u32(pdev->dev.of_node, "xlnx,phyaddr", &lp->phy_addr); 
+	lp->is_vcu118 = of_property_read_bool(pdev->dev.of_node, "xlnx,vcu118");
+
+	if (lp->is_vcu118)
+		dev_info(&pdev->dev, "enabling VCU118-specific quirk fixes\n");
 
 	/* Set default USXGMII rate */
 	lp->usxgmii_rate = SPEED_1000;
