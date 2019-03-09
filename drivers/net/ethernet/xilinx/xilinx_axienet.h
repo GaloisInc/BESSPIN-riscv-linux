@@ -505,6 +505,41 @@
 #define XAE_RX_BUFFERS		64
 #define XAE_MAX_PKT_LEN		8192
 
+
+/*Macros used to fix TI DP83867 startup issue on VCU118 and similar boards */
+#define XAE_TI_QUIRK_RETRIES 20
+#define XAE_TI_PHY_BMCR      0x00
+#define XAE_TI_PHY_PHYCR     0x10
+#define XAE_TI_PHY_CFG2      0x14
+#define XAE_TI_PHY_CR        0x0D
+#define XAE_TI_PHY_AR        0x0E
+// Reg > 0x1F should use WRITE_TI_REG function
+#define XAE_TI_PHY_CFG4      0x31
+#define XAE_TI_PHY_SGMIICTL1 0xD3
+
+#define XAE_TI_PHY_DEVAD     0x1F
+#define XAE_TI_PHY_DEVAD_EN  0x4000
+#define XAE_TI_PHY_SGMII_6W  0x4000
+#define XAE_TI_PHY_SGMII_EN  0x0800
+#define XAE_TI_PHY_CFG2_DEF  0x29C7
+// IMPORTANT: Special reserved bits 8:7 MUST be '10' for workaround
+#define XAE_TI_PHY_SGMII_TMR 0x0160 
+#define XAE_TI_PHY_CONFIG    0x1140
+#define XAE_TI_PHY_RESET     0x8000
+
+#define XAE_PHY_CTRL	     0x00
+#define XAE_PHY_STATUS	     0x01
+#define XAE_PHY_CONFIG	     0x1140
+#define XAE_PHY_RST_AUTONEG  0x0200
+#define XAE_PHY_AUTONEG_DONE 0x20
+
+#define WRITE_TI_EREG(dev, reg, data) {\
+	phy_write(dev, XAE_TI_PHY_CR, XAE_TI_PHY_DEVAD);\
+	phy_write(dev, XAE_TI_PHY_AR, reg);\
+	phy_write(dev, XAE_TI_PHY_CR, XAE_TI_PHY_DEVAD | XAE_TI_PHY_DEVAD_EN);\
+	phy_write(dev, XAE_TI_PHY_AR, data);\
+}
+
 /**
  * struct axidma_bd - Axi Dma buffer descriptor layout
  * @next:         MM2S/S2MM Next Descriptor Pointer
@@ -637,6 +672,7 @@ enum axienet_tsn_ioctl {
  * @num_rx_queues: Total number of Rx DMA queues
  * @dq:		DMA queues data
  * @phy_mode:	Phy type to identify between MII/GMII/RGMII/SGMII/1000 Base-X
+ * @phy_addr:	Address of internal PHY when using an external PHY chip
  * @is_tsn:	Denotes a tsn port
  * @temac_no:	Denotes the port number in TSN IP
  * @num_tc:	Total number of TSN Traffic classes
@@ -762,6 +798,7 @@ struct axienet_local {
 	u16 weight;
 
 	u32 usxgmii_rate;
+	u32 phy_addr;
 };
 
 /**
@@ -1052,6 +1089,7 @@ void __axienet_device_reset(struct axienet_dma_q *q, off_t offset);
 void axienet_set_mac_address(struct net_device *ndev, const void *address);
 void axienet_set_multicast_list(struct net_device *ndev);
 int xaxienet_rx_poll(struct napi_struct *napi, int quota);
+int axienet_fix_ti_quirk(struct axienet_local *lp, struct phy_device *phydev);
 
 #if defined(CONFIG_AXIENET_HAS_MCDMA)
 int __maybe_unused axienet_mcdma_rx_q_init(struct net_device *ndev,

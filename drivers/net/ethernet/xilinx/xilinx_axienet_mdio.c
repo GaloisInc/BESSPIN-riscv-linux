@@ -131,7 +131,6 @@ int axienet_mdio_setup(struct axienet_local *lp, struct device_node *np)
 {
 	int ret;
 	u32 clk_div, host_clock;
-	u32 phyreg0;
 
 	struct mii_bus *bus;
 	struct resource res;
@@ -221,30 +220,6 @@ int axienet_mdio_setup(struct axienet_local *lp, struct device_node *np)
 	bus->write = axienet_mdio_write;
 	bus->parent = lp->dev;
 	lp->mii_bus = bus;
-
-	// Work around for enabling SGMII clock
-	axienet_mdio_write(bus, 0x3, 0x0, 0x9140);
-	axienet_mdio_write(bus, 0x3, 0xD, 0x1f);
-	axienet_mdio_write(bus, 0x3, 0xE, 0xD3);
-	axienet_mdio_write(bus, 0x3, 0xD, 0x401f);
-	axienet_mdio_write(bus, 0x3, 0xE, 0x4000);
-
-	// Enable SGMII
-	axienet_mdio_write(bus, 0x3, 0x10, 0x0800);
-	axienet_mdio_write(bus, 0x3, 0x14, 0x29c7);
-	mdelay(4);
-
-	// Configure Internal PHY
-	phyreg0 = axienet_mdio_read(bus, 0x1, 0x0);
-	while (phyreg0 == 0xffff) {
-		mdelay(1);
-		phyreg0 = axienet_mdio_read(bus, 0x1, 0x0);
-	}
-	phyreg0 &= (~0x1000);
-	phyreg0 &= (~0x0400);
-	phyreg0 |= 0x0040;
-	axienet_mdio_write(bus, 0x1, 0x0, 0x1340);
-	mdelay(1);
 
 	ret = of_mdiobus_register(bus, np1);
 	if (ret) {

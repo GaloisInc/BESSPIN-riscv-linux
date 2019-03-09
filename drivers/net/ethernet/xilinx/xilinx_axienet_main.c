@@ -1512,6 +1512,92 @@ static int axienet_mii_init(struct net_device *ndev)
 	return 0;
 }
 
+ /* Fixing a problem with the VCU118 development board.
+  * The TI DP84867 PHY is wired to provide the SGMII clock 
+  * to the internal PHY, but the default strapping is wrong.
+  *
+  * Need to first initialize the SGMII clock on the TI chip
+  * and then restart the MII<->SGMII bridge in the AXI Ethernet
+  * Subsystem.
+  */
+/*
+#define XAE_TI_QUIRK_RETRIES 20
+#define XAE_TI_PHY_BMCR      0x00
+#define XAE_TI_PHY_PHYCR     0x10
+#define XAE_TI_PHY_CFG2      0x14
+#define XAE_TI_PHY_CR        0x0D
+#define XAE_TI_PHY_AR        0x0E
+// Reg > 0x1F should use WRITE_TI_REG function
+#define XAE_TI_PHY_CFG4      0x31
+#define XAE_TI_PHY_SGMIICTL1 0xD3
+
+#define XAE_TI_PHY_DEVAD     0x1F
+#define XAE_TI_PHY_DEVAD_EN  0x4000
+#define XAE_TI_PHY_SGMII_6W  0x4000
+#define XAE_TI_PHY_SGMII_EN  0x0800
+#define XAE_TI_PHY_CFG2_DEF  0x29C7
+// IMPORTANT: Special reserved bits 8:7 MUST be '10' for workaround
+#define XAE_TI_PHY_SGMII_TMR 0x0160 
+#define XAE_TI_PHY_CONFIG    0x1140
+#define XAE_TI_PHY_RESET     0x8000
+
+#define XAE_PHY_CTRL	     0x00
+#define XAE_PHY_STATUS	     0x01
+#define XAE_PHY_CONFIG	     0x1140
+#define XAE_PHY_RST_AUTONEG  0x0200
+#define XAE_PHY_AUTONEG_DONE 0x20
+
+#define WRITE_TI_EREG(dev, reg, data) {\
+	phy_write(dev, XAE_TI_PHY_CR, XAE_TI_PHY_DEVAD);\
+	phy_write(dev, XAE_TI_PHY_AR, reg);\
+	phy_write(dev, XAE_TI_PHY_CR, XAE_TI_PHY_DEVAD | XAE_TI_PHY_DEVAD_EN);\
+	phy_write(dev, XAE_TI_PHY_AR, data);\
+}
+*/
+int axienet_fix_ti_quirk(struct axienet_local *lp, struct phy_device *phydev)
+{
+	int i;
+
+	if (!lp->mii_bus || !phydev) {
+		return -ENODEV;
+	}
+
+	i = 0;
+	do {	
+		if (i++ >= XAE_TI_QUIRK_RETRIES)
+			goto err;
+		dev_dbg(lp->dev,
+			"axienet Enabling SGMII clock on TI PHY. Try #%d\n", i);
+		// Work around for enabling SGMII clock
+		WRITE_TI_EREG(phydev, XAE_TI_PHY_SGMIICTL1,  XAE_TI_PHY_SGMII_6W);
+		phy_write(    phydev,     XAE_TI_PHY_PHYCR,  XAE_TI_PHY_SGMII_EN);
+		phy_write(    phydev,      XAE_TI_PHY_CFG2,  XAE_TI_PHY_CFG2_DEF);
+		WRITE_TI_EREG(phydev,      XAE_TI_PHY_CFG4, XAE_TI_PHY_SGMII_TMR);
+		phy_write(    phydev,      XAE_TI_PHY_BMCR, 
+			XAE_TI_PHY_CONFIG | XAE_TI_PHY_RESET);
+	} while (lp->mii_bus->read(lp->mii_bus, lp->phy_addr, XAE_PHY_CTRL) == 0x0ffff);
+
+	/* Occasionally, the Xilinx PHY will not auto-negotiate with the TI PHY properly on the 
+ 	 * first try. This loop will try until the XAE_TI_QUIRK_RETRIES is hit.
+	 */
+	i = 0;
+	do {
+		if (i++ >= XAE_TI_QUIRK_RETRIES)
+			goto err;
+		dev_dbg(lp->dev,
+			"axienet Establishing SGMII link to TI PHY. Try #%d\n", i);
+		lp->mii_bus->write(lp->mii_bus, lp->phy_addr, XAE_PHY_CTRL, 
+			XAE_PHY_CONFIG | XAE_PHY_RST_AUTONEG);
+		mdelay(40);
+	} while ((lp->mii_bus->read(lp->mii_bus, lp->phy_addr, XAE_PHY_STATUS) 
+			& XAE_PHY_AUTONEG_DONE) == 0);
+
+	return 0;
+err:
+	dev_err(lp->dev, "Could not successfully bring up TI chip\n");
+	return -EREMOTEIO;
+}
+
 /**
  * axienet_open - Driver open routine.
  * @ndev:	Pointer to net_device structure
@@ -1558,10 +1644,14 @@ static int axienet_open(struct net_device *ndev)
 						lp->phy_interface);
 		}
 
-		if (!phydev)
+		if (!phydev) {
 			dev_err(lp->dev, "of_phy_connect() failed\n");
-		else
+		} else {
+			ret = axienet_fix_ti_quirk(lp, phydev);
+			if (ret < 0)
+				goto err_ti_quirk;
 			phy_start(phydev);
+		}
 	}
 
 	if (!lp->is_tsn || lp->temac_no == XAE_TEMAC1) {
@@ -1738,12 +1828,13 @@ err_tx_irq:
 #ifdef CONFIG_XILINX_TSN_PTP
 err_ptp_rx_irq:
 #endif
+	dev_err(lp->dev, "request_irq() failed\n");
+err_ti_quirk:
 	if (phydev)
 		phy_disconnect(phydev);
 	phydev = NULL;
 	for_each_rx_dma_queue(lp, i)
 		tasklet_kill(&lp->dma_err_tasklet[i]);
-	dev_err(lp->dev, "request_irq() failed\n");
 	return ret;
 }
 
@@ -2697,6 +2788,13 @@ static int axienet_probe(struct platform_device *pdev)
 	 */
 	lp->phy_mode = ~0;
 	of_property_read_u32(pdev->dev.of_node, "xlnx,phy-type", &lp->phy_mode);
+
+	/* The phyaddr is optional but default is 1. This is the internal "PHY"
+ 	 * in the PCS/PMA or SGMII block. It is sometimes necessary to access
+ 	 * this internal block directly when using an external PHY chip
+ 	 */
+	lp->phy_addr = 1;
+	of_property_read_u32(pdev->dev.of_node, "xlnx,phyaddr", &lp->phy_addr); 
 
 	/* Set default USXGMII rate */
 	lp->usxgmii_rate = SPEED_1000;
