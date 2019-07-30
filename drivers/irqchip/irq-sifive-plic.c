@@ -3,7 +3,6 @@
  * Copyright (C) 2017 SiFive
  * Copyright (C) 2018 Christoph Hellwig
  */
-#define DEBUG
 #define pr_fmt(fmt) "plic: " fmt
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -148,9 +147,6 @@ static struct irq_domain *plic_irqdomain;
  * that source ID back to the same claim register.  This automatically enables
  * and disables the interrupt, so there's nothing else to do.
  */
-
-static int plic_counter = 0;
-
 static void plic_handle_irq(struct pt_regs *regs)
 {
 	struct plic_handler *handler = this_cpu_ptr(&plic_handlers);
@@ -169,9 +165,6 @@ static void plic_handle_irq(struct pt_regs *regs)
 		else
 			generic_handle_irq(irq);
 		writel(hwirq, claim);
-		if (plic_counter++ == 0) {
-			hwirq = readl(claim);
-		}
 	}
 	csr_set(sie, SIE_SEIE);
 }
