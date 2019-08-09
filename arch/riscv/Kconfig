@@ -217,6 +217,16 @@ config FPU
 
 	  If you don't know what to do here, say Y.
 
+config DMA_DEFAULT_UNCACHED
+       bool "Support reserved memory for DMA"
+       default n
+       help
+         Enable support for allocating memory for DMA from a reserved uncached
+	 memory region specified in the device tree with the
+	 "linux,dma-default" property.
+
+	 If you don't know what to do here, say N.
+
 endmenu
 
 menu "Kernel features"
