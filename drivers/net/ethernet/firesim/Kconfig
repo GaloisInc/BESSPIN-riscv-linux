@@ -1,0 +1,22 @@
+config NET_VENDOR_FIRESIM
+	bool "FireSim devices"
+	default y
+	depends on RISCV
+	---help---
+	  If you have a simulated network device belonging to this class, say Y.
+
+	  Note that the answer to this question doesn't directly affect the
+	  kernel: saying N will just cause the configurator to skip all
+	  the questions about FireSim devices. If you say Y, you will be asked
+	  for your specific card in the following questions.
+
+if NET_VENDOR_FIRESIM
+
+config FIRESIM_ICENET
+	tristate "FireSim ICENET support"
+	default y
+	depends on RISCV
+	---help---
+	  This driver supports the standard IceNet device used in FireSim
+
+endif # NET_VENDOR_FIRESIM
