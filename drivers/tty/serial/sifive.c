@@ -121,7 +121,7 @@
  * SIFIVE_DEFAULT_BAUD_RATE: default baud rate that the driver should
  *                           configure itself to use
  */
-#define SIFIVE_DEFAULT_BAUD_RATE		115200
+#define SIFIVE_DEFAULT_BAUD_RATE		3686400
 
 /* SIFIVE_SERIAL_NAME: our driver's name that we pass to the operating system */
 #define SIFIVE_SERIAL_NAME			"sifive-serial"
@@ -465,6 +465,7 @@ static void __ssp_update_div(struct sifive_serial_port *ssp)
 	u16 div;
 
 	div = DIV_ROUND_UP(ssp->clkin_rate, ssp->baud_rate) - 1;
+	dev_info(ssp->dev, "Setting baudrate to %d\n", div);
 
 	__ssp_writel(div, SIFIVE_SERIAL_DIV_OFFS, ssp);
 }
@@ -479,6 +480,9 @@ static void __ssp_update_div(struct sifive_serial_port *ssp)
  * be some error between the target bit rate and the actual bit rate implemented
  * by the UART due to clock ratio granularity.
  */
+
+// This is currently unused. Commenting out to remove warning
+/*
 static void __ssp_update_baud_rate(struct sifive_serial_port *ssp,
 				   unsigned int rate)
 {
@@ -488,6 +492,7 @@ static void __ssp_update_baud_rate(struct sifive_serial_port *ssp,
 	ssp->baud_rate = rate;
 	__ssp_update_div(ssp);
 }
+*/
 
 /**
  * __ssp_set_stop_bits() - set the number of stop bits
@@ -659,8 +664,10 @@ static void sifive_serial_set_termios(struct uart_port *port,
 	__ssp_set_stop_bits(ssp, nstop);
 
 	/* Set line rate */
-	rate = uart_get_baud_rate(port, termios, old, 0, ssp->clkin_rate / 16);
-	__ssp_update_baud_rate(ssp, rate);
+	// Temporarily disable this so the baud rate stays fixed for FireSim
+	//rate = uart_get_baud_rate(port, termios, old, 0, ssp->clkin_rate / 16);
+	//__ssp_update_baud_rate(ssp, rate);
+	rate = SIFIVE_DEFAULT_BAUD_RATE;
 
 	spin_lock_irqsave(&ssp->port.lock, flags);
 
@@ -797,7 +804,7 @@ static void sifive_serial_console_write(struct console *co, const char *s,
 	local_irq_restore(flags);
 }
 
-static int __init sifive_serial_console_setup(struct console *co, char *options)
+static int __ref sifive_serial_console_setup(struct console *co, char *options)
 {
 	struct sifive_serial_port *ssp;
 	int baud = SIFIVE_DEFAULT_BAUD_RATE;
@@ -894,6 +901,10 @@ static int sifive_serial_probe(struct platform_device *pdev)
 	struct clk *clk;
 	void __iomem *base;
 	int irq, id, r;
+	int provided_clk;
+	struct device_node *cpu;	
+	uint32_t freq;
+	provided_clk = 1;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
@@ -910,8 +921,11 @@ static int sifive_serial_probe(struct platform_device *pdev)
 
 	clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(clk)) {
-		dev_err(&pdev->dev, "unable to find controller clock\n");
-		return PTR_ERR(clk);
+		// Temporary work around if a clock is not set
+		provided_clk = 0;
+
+		//dev_err(&pdev->dev, "unable to find controller clock\n");
+		//return PTR_ERR(clk);
 	}
 
 	id = of_alias_get_id(pdev->dev.of_node, "serial");
@@ -941,23 +955,35 @@ static int sifive_serial_probe(struct platform_device *pdev)
 	ssp->port.mapbase = mem->start;
 	ssp->port.membase = base;
 	ssp->dev = &pdev->dev;
-	ssp->clk = clk;
-	ssp->clk_notifier.notifier_call = sifive_serial_clk_notifier;
 
-	r = clk_notifier_register(ssp->clk, &ssp->clk_notifier);
-	if (r) {
-		dev_err(&pdev->dev, "could not register clock notifier: %d\n",
-			r);
-		goto probe_out1;
+	if (provided_clk) {
+		ssp->clk = clk;
+		ssp->clk_notifier.notifier_call = sifive_serial_clk_notifier;
+		r = clk_notifier_register(ssp->clk, &ssp->clk_notifier);
+		if (r) {
+			dev_err(&pdev->dev, "could not register clock notifier: %d\n",
+				r);
+			goto probe_out1;
+		}
+
+		/* Set up clock divider */
+		ssp->clkin_rate = clk_get_rate(ssp->clk);
+	} else {
+		ssp->clk = 0;
+		// Get the clock frequency from the CPU
+		freq = 100000000; // Default 100MHz clock rate
+		cpu = of_find_node_by_path("/cpus/cpu@0");
+        	if (!cpu || of_property_read_u32(cpu, "clock-frequency", &freq))
+			dev_info(&pdev->dev, "could not find clock frequency, assuming %d\n",
+				freq);
+
+		ssp->clkin_rate = freq;
 	}
 
-	/* Set up clock divider */
-	ssp->clkin_rate = clk_get_rate(ssp->clk);
 	ssp->baud_rate = SIFIVE_DEFAULT_BAUD_RATE;
 	__ssp_update_div(ssp);
-
+	
 	platform_set_drvdata(pdev, ssp);
-
 	/* Enable transmits and set the watermark level to 1 */
 	__ssp_writel((1 << SIFIVE_SERIAL_TXCTRL_TXCNT_SHIFT) |
 		     SIFIVE_SERIAL_TXCTRL_TXEN_MASK,
@@ -989,7 +1015,7 @@ probe_out3:
 	__ssp_remove_console_port(ssp);
 	free_irq(ssp->port.irq, ssp);
 probe_out2:
-	clk_notifier_unregister(ssp->clk, &ssp->clk_notifier);
+	if (provided_clk) clk_notifier_unregister(ssp->clk, &ssp->clk_notifier);
 probe_out1:
 	return r;
 }
@@ -1001,7 +1027,7 @@ static int sifive_serial_remove(struct platform_device *dev)
 	__ssp_remove_console_port(ssp);
 	uart_remove_one_port(&sifive_serial_uart_driver, &ssp->port);
 	free_irq(ssp->port.irq, ssp);
-	clk_notifier_unregister(ssp->clk, &ssp->clk_notifier);
+	if (ssp->clk) clk_notifier_unregister(ssp->clk, &ssp->clk_notifier);
 
 	return 0;
 }
