@@ -309,7 +309,7 @@ config HW_RANDOM_HISI
 
 config HW_RANDOM_ST
 	tristate "ST Microelectronics HW Random Number Generator support"
-	depends on HW_RANDOM && ARCH_STI
+	depends on HW_RANDOM && (ARCH_STI || RISCV)
 	---help---
 	  This driver provides kernel-side support for the Random Number
 	  Generator hardware found on STi series of SoCs.
