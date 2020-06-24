@@ -23,7 +23,7 @@
 /* Can't add new CONFIG parameters in an external module, so define them here */
 #define CONFIG_ICENET_MTU 1500
 #define CONFIG_ICENET_RING_SIZE 64
-#define CONFIG_ICENET_CHECKSUM
+//#define CONFIG_ICENET_CHECKSUM
 #define CONFIG_ICENET_TX_THRESHOLD 16
 
 #define ICENET_NAME "icenet"
