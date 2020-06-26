@@ -100,6 +100,18 @@ static DEFINE_SPINLOCK(io_tlb_lock);
 
 static int late_alloc;
 
+static phys_addr_t phys_offset;
+
+static inline phys_addr_t io_tlb_virt_to_phys(void * virt)
+{
+	return (phys_addr_t)virt - phys_offset;
+}
+
+static inline void * io_tlb_phys_to_virt(phys_addr_t phys)
+{
+	return (void*)(phys + phys_offset);
+}
+
 static int __init
 setup_io_tlb_npages(char *str)
 {
@@ -183,7 +195,7 @@ void __init swiotlb_update_mem_attributes(void)
 	if (no_iotlb_memory || late_alloc)
 		return;
 
-	vaddr = phys_to_virt(io_tlb_start);
+	vaddr = io_tlb_phys_to_virt(io_tlb_start);
 	bytes = PAGE_ALIGN(io_tlb_nslabs << IO_TLB_SHIFT);
 	set_memory_decrypted((unsigned long)vaddr, bytes >> PAGE_SHIFT);
 	memset(vaddr, 0, bytes);
@@ -310,7 +322,67 @@ swiotlb_late_init_with_tbl(char *tlb, unsigned long nslabs)
 	bytes = nslabs << IO_TLB_SHIFT;
 
 	io_tlb_nslabs = nslabs;
-	io_tlb_start = virt_to_phys(tlb);
+	io_tlb_start = io_tlb_virt_to_phys(tlb);
+	io_tlb_end = io_tlb_start + bytes;
+
+	set_memory_decrypted((unsigned long)tlb, bytes >> PAGE_SHIFT);
+	memset(tlb, 0, bytes);
+
+	/*
+	 * Allocate and initialize the free list array.  This array is used
+	 * to find contiguous free memory regions of size up to IO_TLB_SEGSIZE
+	 * between io_tlb_start and io_tlb_end.
+	 */
+	io_tlb_list = (unsigned int *)__get_free_pages(GFP_KERNEL,
+	                              get_order(io_tlb_nslabs * sizeof(int)));
+	if (!io_tlb_list)
+		goto cleanup3;
+
+	io_tlb_orig_addr = (phys_addr_t *)
+		__get_free_pages(GFP_KERNEL,
+				 get_order(io_tlb_nslabs *
+					   sizeof(phys_addr_t)));
+	if (!io_tlb_orig_addr)
+		goto cleanup4;
+
+	for (i = 0; i < io_tlb_nslabs; i++) {
+		io_tlb_list[i] = IO_TLB_SEGSIZE - OFFSET(i, IO_TLB_SEGSIZE);
+		io_tlb_orig_addr[i] = INVALID_PHYS_ADDR;
+	}
+	io_tlb_index = 0;
+
+	swiotlb_print_info();
+
+	late_alloc = 1;
+
+	swiotlb_set_max_segment(io_tlb_nslabs << IO_TLB_SHIFT);
+
+	return 0;
+
+cleanup4:
+	free_pages((unsigned long)io_tlb_list, get_order(io_tlb_nslabs *
+	                                                 sizeof(int)));
+	io_tlb_list = NULL;
+cleanup3:
+	io_tlb_end = 0;
+	io_tlb_start = 0;
+	io_tlb_nslabs = 0;
+	max_segment = 0;
+	return -ENOMEM;
+}
+
+
+int
+swiotlb_late_init_with_tbl_phys(char *tlb, phys_addr_t tlb_phys, unsigned long nslabs)
+{
+	unsigned long i, bytes;
+
+	phys_offset = (phys_addr_t)tlb - tlb_phys;
+
+	bytes = nslabs << IO_TLB_SHIFT;
+
+	io_tlb_nslabs = nslabs;
+	io_tlb_start = io_tlb_virt_to_phys(tlb);
 	io_tlb_end = io_tlb_start + bytes;
 
 	set_memory_decrypted((unsigned long)tlb, bytes >> PAGE_SHIFT);
@@ -369,7 +441,7 @@ void __init swiotlb_exit(void)
 			   get_order(io_tlb_nslabs * sizeof(phys_addr_t)));
 		free_pages((unsigned long)io_tlb_list, get_order(io_tlb_nslabs *
 								 sizeof(int)));
-		free_pages((unsigned long)phys_to_virt(io_tlb_start),
+		free_pages((unsigned long)io_tlb_phys_to_virt(io_tlb_start),
 			   get_order(io_tlb_nslabs << IO_TLB_SHIFT));
 	} else {
 		memblock_free_late(__pa(io_tlb_orig_addr),
@@ -395,7 +467,7 @@ static void swiotlb_bounce(phys_addr_t orig_addr, phys_addr_t tlb_addr,
 			   size_t size, enum dma_data_direction dir)
 {
 	unsigned long pfn = PFN_DOWN(orig_addr);
-	unsigned char *vaddr = phys_to_virt(tlb_addr);
+	unsigned char *vaddr = io_tlb_phys_to_virt(tlb_addr);
 
 	if (PageHighMem(pfn_to_page(pfn))) {
 		/* The buffer does not have a mapping.  Map it in and copy */

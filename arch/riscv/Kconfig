@@ -43,6 +43,7 @@ config RISCV
 	select RISCV_TIMER
 	select GENERIC_IRQ_MULTI_HANDLER
 	select ARCH_HAS_PTE_SPECIAL
+	select ARCH_HAS_PHYS_TO_DMA if DMA_DEFAULT_UNCACHED
 
 config MMU
 	def_bool y
@@ -217,6 +218,16 @@ config FPU
 
 	  If you don't know what to do here, say Y.
 
+config DMA_DEFAULT_UNCACHED
+       bool "Support reserved memory for DMA"
+       default n
+       help
+         Enable support for allocating memory for DMA from a reserved uncached
+	 memory region specified in the device tree with the
+	 "linux,dma-default" property.
+
+	 If you don't know what to do here, say N.
+
 endmenu
 
 menu "Kernel features"
@@ -250,6 +261,11 @@ config CMDLINE
 	default ""
 	help
 	  Supply command-line options at build time by entering them here.
+
+config CMDLINE_EXTEND
+	bool "Extend the command line options"
+	depends on CMDLINE_BOOL
+	default n
 
 config CMDLINE_FORCE
 	bool "Built-in command line overrides bootloader arguments"

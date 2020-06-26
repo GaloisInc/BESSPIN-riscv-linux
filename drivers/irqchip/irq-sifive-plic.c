@@ -3,7 +3,6 @@
  * Copyright (C) 2017 SiFive
  * Copyright (C) 2018 Christoph Hellwig
  */
-#define DEBUG
 #define pr_fmt(fmt) "plic: " fmt
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -106,30 +105,34 @@ static inline void plic_irq_toggle(struct irq_data *d, int enable)
 	}
 }
 
-static void plic_irq_enable(struct irq_data *d)
+static void plic_irq_unmask(struct irq_data *d)
 {
 	plic_irq_toggle(d, 1);
 }
 
-static void plic_irq_disable(struct irq_data *d)
+static void plic_irq_mask(struct irq_data *d)
 {
 	plic_irq_toggle(d, 0);
 }
 
+static void plic_irq_eoi(struct irq_data *d)
+{
+	struct plic_handler *handler = this_cpu_ptr(&plic_handlers);
+
+	writel(d->hwirq, plic_hart_offset(handler->ctxid) + CONTEXT_CLAIM);
+}
+
 static struct irq_chip plic_chip = {
 	.name		= "SiFive PLIC",
-	/*
-	 * There is no need to mask/unmask PLIC interrupts.  They are "masked"
-	 * by reading claim and "unmasked" when writing it back.
-	 */
-	.irq_enable	= plic_irq_enable,
-	.irq_disable	= plic_irq_disable,
+	.irq_mask	= plic_irq_mask,
+	.irq_unmask	= plic_irq_unmask,
+	.irq_eoi	= plic_irq_eoi,
 };
 
 static int plic_irqdomain_map(struct irq_domain *d, unsigned int irq,
 			      irq_hw_number_t hwirq)
 {
-	irq_set_chip_and_handler(irq, &plic_chip, handle_simple_irq);
+	irq_set_chip_and_handler(irq, &plic_chip, handle_fasteoi_irq);
 	irq_set_chip_data(irq, NULL);
 	irq_set_noprobe(irq);
 	return 0;
@@ -148,9 +151,6 @@ static struct irq_domain *plic_irqdomain;
  * that source ID back to the same claim register.  This automatically enables
  * and disables the interrupt, so there's nothing else to do.
  */
-
-static int plic_counter = 0;
-
 static void plic_handle_irq(struct pt_regs *regs)
 {
 	struct plic_handler *handler = this_cpu_ptr(&plic_handlers);
@@ -168,10 +168,6 @@ static void plic_handle_irq(struct pt_regs *regs)
 					hwirq);
 		else
 			generic_handle_irq(irq);
-		writel(hwirq, claim);
-		if (plic_counter++ == 0) {
-			hwirq = readl(claim);
-		}
 	}
 	csr_set(sie, SIE_SEIE);
 }

@@ -30,6 +30,7 @@
 #include <linux/of_platform.h>
 #include <linux/sched/task.h>
 #include <linux/swiotlb.h>
+#include <linux/dma-direct.h>
 
 #include <asm/setup.h>
 #include <asm/sections.h>
@@ -38,6 +39,7 @@
 #include <asm/sbi.h>
 #include <asm/tlbflush.h>
 #include <asm/thread_info.h>
+#include <asm/dma.h>
 
 #ifdef CONFIG_EARLY_PRINTK
 static void sbi_console_write(struct console *co, const char *buf,
@@ -238,7 +240,7 @@ void __init setup_arch(char **cmdline_p)
 	paging_init();
 	unflatten_device_tree();
 
-#ifdef CONFIG_SWIOTLB
+#if defined(CONFIG_SWIOTLB) && !defined(CONFIG_DMA_DEFAULT_UNCACHED)
 	swiotlb_init(1);
 #endif
 
@@ -253,3 +255,35 @@ void __init setup_arch(char **cmdline_p)
 	riscv_fill_hwcap();
 }
 
+#ifdef CONFIG_DMA_DEFAULT_UNCACHED
+static int __init
+riscv_swiotlb_setup(void)
+{
+	size_t size = (16U<<20);
+	void *vstart;
+	unsigned long bytes;
+	unsigned long nslabs;
+	dma_addr_t dma_addr;
+
+	nslabs = (size >> IO_TLB_SHIFT);
+	nslabs = ALIGN(nslabs, IO_TLB_SEGSIZE);
+
+	bytes = nslabs << IO_TLB_SHIFT;
+
+	vstart = dma_alloc_from_global_coherent(bytes, &dma_addr);
+	if (vstart == NULL)
+		return -ENOMEM;
+
+	pr_info("vstart = %#010llx, dma_addr = %#010llx\n",
+		(unsigned long long)vstart,
+		(unsigned long long)dma_addr);
+	if (swiotlb_late_init_with_tbl_phys(vstart, dma_addr, nslabs)) {
+		dma_release_from_global_coherent(get_order(bytes), vstart);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+subsys_initcall(riscv_swiotlb_setup);
+#endif /* CONFIG_DMA_DEFAULT_UNCACHED */
