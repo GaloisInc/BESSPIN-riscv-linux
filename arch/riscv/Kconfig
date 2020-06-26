@@ -262,6 +262,11 @@ config CMDLINE
 	help
 	  Supply command-line options at build time by entering them here.
 
+config CMDLINE_EXTEND
+	bool "Extend the command line options"
+	depends on CMDLINE_BOOL
+	default n
+
 config CMDLINE_FORCE
 	bool "Built-in command line overrides bootloader arguments"
 	depends on CMDLINE_BOOL

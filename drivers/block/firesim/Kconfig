@@ -1,0 +1,8 @@
+
+config FIRESIM_ICEBLK
+	tristate "FireSim ICEBLK support"
+	default y
+	depends on RISCV
+	---help---
+	  This driver supports the standard iceblk device used in FireSim
+
