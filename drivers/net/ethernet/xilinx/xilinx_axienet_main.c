@@ -217,14 +217,26 @@ void axienet_set_mac_address(struct net_device *ndev, const void *address)
 {
 	struct axienet_local *lp = netdev_priv(ndev);
 	dev_info(&ndev->dev, "%s: Begin Func\n", __func__);
-	if (address)
+	if (address) {
 		ether_addr_copy(ndev->dev_addr, address);
-	if (!is_valid_ether_addr(ndev->dev_addr))
+		dev_info(&ndev->dev, "In <axienet_set_mac_address>: After if(address)\n");
+	} else {
+		dev_info(&ndev->dev, "In <axienet_set_mac_address>: else(address)\n");
+	}
+	
+	if (!is_valid_ether_addr(ndev->dev_addr)){
 		eth_hw_addr_random(ndev);
+		dev_info(&ndev->dev, "In <axienet_set_mac_address>: After if(is_valid_ether_addr)\n");
+	} else {
+		dev_info(&ndev->dev, "In <axienet_set_mac_address>: else(is_valid_ether_addr)\n");
+	}
 
 	if (lp->axienet_config->mactype != XAXIENET_1G &&
 	    lp->axienet_config->mactype != XAXIENET_2_5G)
-		return;
+		{	
+			dev_info(&ndev->dev, "In <axienet_set_mac_address>: After if(lp->) --> return \n");
+			return;
+		}
 
 	/* Set up unicast MAC address filter set its mac address */
 	axienet_iow(lp, XAE_UAW0_OFFSET,
@@ -232,11 +244,13 @@ void axienet_set_mac_address(struct net_device *ndev, const void *address)
 		    (ndev->dev_addr[1] << 8) |
 		    (ndev->dev_addr[2] << 16) |
 		    (ndev->dev_addr[3] << 24));
+	dev_info(&ndev->dev, "In <axienet_set_mac_address>: After first axienet_iow \n");
 	axienet_iow(lp, XAE_UAW1_OFFSET,
 		    (((axienet_ior(lp, XAE_UAW1_OFFSET)) &
 		      ~XAE_UAW1_UNICASTADDR_MASK) |
 		     (ndev->dev_addr[4] |
 		     (ndev->dev_addr[5] << 8))));
+	dev_info(&ndev->dev, "In <axienet_set_mac_address>: After second axienet_iow \n");
 }
 
 /**
@@ -2958,11 +2972,13 @@ static int axienet_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "could not find MAC address\n");
 		goto err_disable_ethclk;
 	}
+	dev_info(&pdev->dev, "In <axienet_probe> BEFORE calling <axienet_set_mac_address>\n");
 	axienet_set_mac_address(ndev, mac_addr);
+	dev_info(&pdev->dev, "In <axienet_probe> AFTER calling <axienet_set_mac_address>\n");
 
 	lp->coalesce_count_rx = XAXIDMA_DFT_RX_THRESHOLD;
 	lp->coalesce_count_tx = XAXIDMA_DFT_TX_THRESHOLD;
-
+	dev_info(&pdev->dev, "In <axienet_probe> 10\n");
 	ret = of_get_phy_mode(pdev->dev.of_node);
 	if (ret < 0)
 		dev_warn(&pdev->dev, "couldn't find phy i/f\n");
@@ -2976,7 +2992,7 @@ static int axienet_probe(struct platform_device *pdev)
 		if (ret)
 			dev_warn(&pdev->dev, "error registering MDIO bus\n");
 	}
-
+	dev_info(&pdev->dev, "In <axienet_probe> 11\n");
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	/* Create sysfs file entries for the device */
 	ret = axeinet_mcdma_create_sysfs(&lp->dev->kobj);
@@ -2985,14 +3001,14 @@ static int axienet_probe(struct platform_device *pdev)
 		return ret;
 	}
 #endif
-
+	dev_info(&pdev->dev, "In <axienet_probe> 12\n");
 	ret = register_netdev(lp->ndev);
 	if (ret) {
 		dev_err(lp->dev, "register_netdev() error (%i)\n", ret);
 		axienet_mdio_teardown(lp);
 		goto err_disable_ethclk;
 	}
-
+	dev_info(&pdev->dev, "In <axienet_probe> 13\n");
 #ifdef CONFIG_XILINX_TSN_PTP
 	if (lp->is_tsn) {
 		lp->ptp_rx_irq = platform_get_irq_byname(pdev, "ptp_rx");
@@ -3021,7 +3037,7 @@ static int axienet_probe(struct platform_device *pdev)
 	}
 #endif
 	return 0;
-
+	dev_info(&pdev->dev, "In <axienet_probe> 14\n");
 err_disable_dmaclk:
 	clk_disable_unprepare(lp->dma_clk);
 err_disable_ethclk:
