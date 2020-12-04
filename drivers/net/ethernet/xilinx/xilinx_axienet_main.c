@@ -2116,7 +2116,7 @@ static int axienet_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 #if defined (CONFIG_XILINX_AXI_EMAC_HWTSTAMP) || defined (CONFIG_XILINX_TSN_PTP)
 	struct axienet_local *lp = netdev_priv(dev);
 #endif
-	dev_info(&ndev->dev, "%s: Begin Func\n", __func__);
+	dev_info(&dev->dev, "%s: Begin Func\n", __func__);
 	if (!netif_running(dev))
 		return -EINVAL;
 
