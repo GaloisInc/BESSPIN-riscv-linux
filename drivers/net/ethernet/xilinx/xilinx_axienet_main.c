@@ -151,10 +151,9 @@ static struct xxvenet_option xxvenet_options[] = {
  */
 void axienet_dma_bd_release(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int i;
 	struct axienet_local *lp = netdev_priv(ndev);
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	for_each_tx_dma_queue(lp, i) {
 		axienet_mcdma_tx_bd_free(ndev, lp->dq[i]);
@@ -181,10 +180,9 @@ void axienet_dma_bd_release(struct net_device *ndev)
  */
 static int axienet_dma_bd_init(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int i, ret;
 	struct axienet_local *lp = netdev_priv(ndev);
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	for_each_tx_dma_queue(lp, i) {
 		ret = axienet_mcdma_tx_q_init(ndev, lp->dq[i]);
@@ -217,9 +215,8 @@ static int axienet_dma_bd_init(struct net_device *ndev)
  */
 void axienet_set_mac_address(struct net_device *ndev, const void *address)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct axienet_local *lp = netdev_priv(ndev);
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (address)
 		ether_addr_copy(ndev->dev_addr, address);
 	if (!is_valid_ether_addr(ndev->dev_addr))
@@ -255,8 +252,8 @@ void axienet_set_mac_address(struct net_device *ndev, const void *address)
  */
 static int netdev_set_mac_address(struct net_device *ndev, void *p)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct sockaddr *addr = p;
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 
 	axienet_set_mac_address(ndev, addr->sa_data);
 	return 0;
@@ -275,11 +272,10 @@ static int netdev_set_mac_address(struct net_device *ndev, void *p)
  */
 void axienet_set_multicast_list(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int i;
 	u32 reg, af0reg, af1reg;
 	struct axienet_local *lp = netdev_priv(ndev);
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if ((lp->axienet_config->mactype != XAXIENET_1G) || lp->eth_hasnobuf)
 		return;
 
@@ -350,11 +346,10 @@ void axienet_set_multicast_list(struct net_device *ndev)
  */
 static void axienet_setoptions(struct net_device *ndev, u32 options)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int reg;
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct axienet_option *tp = &axienet_options[0];
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	while (tp->opt) {
 		reg = ((axienet_ior(lp, tp->reg)) & ~(tp->m_or));
 		if (options & tp->opt)
@@ -368,11 +363,10 @@ static void axienet_setoptions(struct net_device *ndev, u32 options)
 
 static void xxvenet_setoptions(struct net_device *ndev, u32 options)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int reg;
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct xxvenet_option *tp = &xxvenet_options[0];
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	while (tp->opt) {
 		reg = ((axienet_ior(lp, tp->reg)) & ~(tp->m_or));
 		if (options & tp->opt)
@@ -386,13 +380,13 @@ static void xxvenet_setoptions(struct net_device *ndev, u32 options)
 
 void __axienet_device_reset(struct axienet_dma_q *q, off_t offset)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 timeout;
 	/* Reset Axi DMA. This would reset Axi Ethernet core as well. The reset
 	 * process of Axi DMA takes a while to complete as all pending
 	 * commands/transfers will be flushed or completed during this
 	 * reset process.
 	 */
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	axienet_dma_out32(q, offset, XAXIDMA_CR_RESET_MASK);
 	timeout = DELAY_OF_ONE_MILLISEC;
 	while (axienet_dma_in32(q, offset) & XAXIDMA_CR_RESET_MASK) {
@@ -418,13 +412,12 @@ void __axienet_device_reset(struct axienet_dma_q *q, off_t offset)
  */
 static void axienet_device_reset(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 axienet_status;
 	struct axienet_local *lp = netdev_priv(ndev);
 	u32 err, val;
 	struct axienet_dma_q *q;
 	u32 i;
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (lp->axienet_config->mactype == XAXIENET_10G_25G) {
 		/* Reset the XXV MAC */
 		val = axienet_ior(lp, XXV_GT_RESET_OFFSET);
@@ -531,13 +524,13 @@ static void axienet_device_reset(struct net_device *ndev)
  */
 static void axienet_adjust_link(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 emmc_reg;
 	u32 link_state;
 	u32 setspeed = 1;
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct phy_device *phy = ndev->phydev;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	link_state = phy->speed | (phy->duplex << 1) | phy->link;
 	if (lp->last_link != link_state) {
 		if ((phy->speed == SPEED_10) || (phy->speed == SPEED_100)) {
@@ -599,7 +592,6 @@ void axienet_tx_hwtstamp(struct axienet_local *lp,
 			 struct axidma_bd *cur_p)
 #endif
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 sec = 0, nsec = 0, val;
 	u64 time64;
 	int err = 0;
@@ -607,6 +599,7 @@ void axienet_tx_hwtstamp(struct axienet_local *lp,
 	struct skb_shared_hwtstamps *shhwtstamps =
 		skb_hwtstamps((struct sk_buff *)cur_p->ptp_tx_skb);
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	val = axienet_txts_ior(lp, XAXIFIFO_TXTS_ISR);
 	if (unlikely(!(val & XAXIFIFO_TXTS_INT_RC_MASK)))
 		dev_info(lp->dev, "Did't get FIFO rx interrupt %d\n", val);
@@ -670,12 +663,12 @@ void axienet_tx_hwtstamp(struct axienet_local *lp,
 static void axienet_rx_hwtstamp(struct axienet_local *lp,
 				struct sk_buff *skb)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 sec = 0, nsec = 0, val;
 	u64 time64;
 	int err = 0;
 	struct skb_shared_hwtstamps *shhwtstamps = skb_hwtstamps(skb);
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	val = axienet_rxts_ior(lp, XAXIFIFO_TXTS_ISR);
 	if (unlikely(!(val & XAXIFIFO_TXTS_INT_RC_MASK))) {
 		dev_info(lp->dev, "Did't get FIFO rx interrupt %d\n", val);
@@ -723,7 +716,6 @@ static void axienet_rx_hwtstamp(struct axienet_local *lp,
  */
 void axienet_start_xmit_done(struct net_device *ndev, struct axienet_dma_q *q)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 size = 0;
 	u32 packets = 0;
 #ifdef CONFIG_XILINX_AXI_EMAC_HWTSTAMP
@@ -736,6 +728,7 @@ void axienet_start_xmit_done(struct net_device *ndev, struct axienet_dma_q *q)
 #endif
 	unsigned int status = 0;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	cur_p = &q->txq_bd_v[q->tx_bd_ci];
 	status = cur_p->sband_stats;
@@ -841,7 +834,6 @@ static inline int axienet_check_tx_bd_space(struct axienet_dma_q *q,
 static void axienet_create_tsheader(u8 *buf, u8 msg_type,
 				    struct axienet_dma_q *q)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct axienet_local *lp = q->lp;
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	struct aximcdma_bd *cur_p;
@@ -850,7 +842,7 @@ static void axienet_create_tsheader(u8 *buf, u8 msg_type,
 #endif
 	u64 val;
 	u32 tmp;
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	cur_p = &q->txq_bd_v[q->tx_bd_tail];
 #else
@@ -884,9 +876,9 @@ static void axienet_create_tsheader(u8 *buf, u8 msg_type,
 #ifdef CONFIG_XILINX_TSN
 static inline u16 get_tsn_queue(u8 pcp, u16 num_tc)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u16 queue = 0;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	/* For 3 queue system, RE queue is 1 and ST queue is 2
 	 * For 2 queue system, ST queue is 1. BE queue is always 0
 	 */
@@ -904,14 +896,13 @@ static inline u16 get_tsn_queue(u8 pcp, u16 num_tc)
 
 static inline u16 tsn_queue_mapping(const struct sk_buff *skb, u16 num_tc)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int queue = 0;
 	u16 vlan_tci;
 	u8 pcp;
 
 	struct ethhdr *hdr = (struct ethhdr *)skb->data;
 	u16 ether_type = ntohs(hdr->h_proto);
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (unlikely(ether_type == ETH_P_8021Q)) {
 		struct vlan_ethhdr *vhdr = (struct vlan_ethhdr *)skb->data;
 
@@ -934,7 +925,6 @@ static inline u16 tsn_queue_mapping(const struct sk_buff *skb, u16 num_tc)
 static int axienet_skb_tstsmp(struct sk_buff **__skb, struct axienet_dma_q *q,
 			      struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	struct aximcdma_bd *cur_p;
 #else
@@ -944,6 +934,7 @@ static int axienet_skb_tstsmp(struct sk_buff **__skb, struct axienet_dma_q *q,
 	struct sk_buff *old_skb = *__skb;
 	struct sk_buff *skb = *__skb;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	cur_p = &q->txq_bd_v[q->tx_bd_tail];
 #else
@@ -1020,7 +1011,6 @@ static int axienet_skb_tstsmp(struct sk_buff **__skb, struct axienet_dma_q *q,
 
 int axienet_queue_xmit(struct sk_buff *skb, struct net_device *ndev, u16 map)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 ii;
 	u32 num_frag;
 	u32 csum_start_off;
@@ -1036,6 +1026,7 @@ int axienet_queue_xmit(struct sk_buff *skb, struct net_device *ndev, u16 map)
 	u32 pad = 0;
 	struct axienet_dma_q *q;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_XILINX_TSN
 	if (unlikely(lp->is_tsn)) {
 		map = tsn_queue_mapping(skb, lp->num_tc);
@@ -1204,9 +1195,8 @@ out:
  */
 static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u16 map = skb_get_queue_mapping(skb); /* Single dma queue default*/
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	return axienet_queue_xmit(skb, ndev, map);
 }
 
@@ -1225,7 +1215,6 @@ static int axienet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 static int axienet_recv(struct net_device *ndev, int budget,
 			struct axienet_dma_q *q)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 length;
 	u32 csumstatus;
 	u32 size = 0;
@@ -1240,6 +1229,7 @@ static int axienet_recv(struct net_device *ndev, int budget,
 #endif
 	unsigned int numbdfree = 0;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	/* Get relevat BD status value */
 	rmb();
 #ifdef CONFIG_AXIENET_HAS_MCDMA
@@ -1392,7 +1382,6 @@ static int axienet_recv(struct net_device *ndev, int budget,
  */
 int xaxienet_rx_poll(struct napi_struct *napi, int quota)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct net_device *ndev = napi->dev;
 	struct axienet_local *lp = netdev_priv(ndev);
 	int work_done = 0;
@@ -1402,6 +1391,7 @@ int xaxienet_rx_poll(struct napi_struct *napi, int quota)
 
 	struct axienet_dma_q *q = lp->dq[map];
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_AXIENET_HAS_MCDMA
 	spin_lock(&q->rx_lock);
 	status = axienet_dma_in32(q, XMCDMA_CHAN_SR_OFFSET(q->chan_id) +
@@ -1467,11 +1457,11 @@ int xaxienet_rx_poll(struct napi_struct *napi, int quota)
  */
 static irqreturn_t axienet_err_irq(int irq, void *_ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	unsigned int status;
 	struct net_device *ndev = _ndev;
 	struct axienet_local *lp = netdev_priv(ndev);
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	status = axienet_ior(lp, XAE_IS_OFFSET);
 	if (status & XAE_INT_RXFIFOOVR_MASK) {
 		ndev->stats.rx_fifo_errors++;
@@ -1497,9 +1487,9 @@ static irqreturn_t axienet_err_irq(int irq, void *_ndev)
  */
 int map_dma_q_irq(int irq, struct axienet_local *lp)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int i;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	for_each_rx_dma_queue(lp, i) {
 		if (irq == lp->dq[i]->tx_irq || irq == lp->dq[i]->rx_irq)
 			return i;
@@ -1510,10 +1500,10 @@ int map_dma_q_irq(int irq, struct axienet_local *lp)
 
 static int axienet_mii_init(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct axienet_local *lp = netdev_priv(ndev);
 	int ret, mdio_mcreg;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	mdio_mcreg = axienet_ior(lp, XAE_MDIO_MC_OFFSET);
 	ret = axienet_mdio_wait_until_ready(lp);
 	if (ret < 0)
@@ -1580,9 +1570,9 @@ static int axienet_mii_init(struct net_device *ndev)
 */
 int axienet_fix_ti_quirk(struct axienet_local *lp, struct phy_device *phydev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int i;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (!lp->mii_bus || !phydev) {
 		return -ENODEV;
 	}
@@ -1637,13 +1627,13 @@ err:
  */
 static int axienet_open(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int ret = 0, i = 0;
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct phy_device *phydev = NULL;
 	struct axienet_dma_q *q;
 	u32 reg, err;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	dev_dbg(&ndev->dev, "axienet_open()\n");
 
 	if (lp->axienet_config->mactype == XAXIENET_10G_25G)
@@ -1878,12 +1868,12 @@ err_ti_quirk:
  */
 static int axienet_stop(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 cr;
 	u32 i;
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct axienet_dma_q *q;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	dev_dbg(&ndev->dev, "axienet_close()\n");
 
 	if (!lp->is_tsn || lp->temac_no == XAE_TEMAC1) {
@@ -1941,9 +1931,9 @@ static int axienet_stop(struct net_device *ndev)
  */
 static int axienet_change_mtu(struct net_device *ndev, int new_mtu)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct axienet_local *lp = netdev_priv(ndev);
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (netif_running(ndev))
 		return -EBUSY;
 
@@ -1966,10 +1956,10 @@ static int axienet_change_mtu(struct net_device *ndev, int new_mtu)
  */
 static void axienet_poll_controller(struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct axienet_local *lp = netdev_priv(ndev);
 	int i;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	for_each_tx_dma_queue(lp, i)
 		disable_irq(lp->dq[i]->tx_irq);
 	for_each_rx_dma_queue(lp, i)
@@ -2005,9 +1995,8 @@ static void axienet_poll_controller(struct net_device *ndev)
 static int axienet_set_timestamp_mode(struct axienet_local *lp,
 				      struct hwtstamp_config *config)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 regval;
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #ifdef CONFIG_XILINX_TSN_PTP
 	if (lp->is_tsn) {
 		/* reserved for future extensions */
@@ -2088,10 +2077,10 @@ static int axienet_set_timestamp_mode(struct axienet_local *lp,
  */
 static int axienet_set_ts_config(struct axienet_local *lp, struct ifreq *ifr)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct hwtstamp_config config;
 	int err;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
 		return -EFAULT;
 
@@ -2116,7 +2105,6 @@ static int axienet_set_ts_config(struct axienet_local *lp, struct ifreq *ifr)
  */
 static int axienet_get_ts_config(struct axienet_local *lp, struct ifreq *ifr)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct hwtstamp_config *config = &lp->tstamp_config;
 
 	return copy_to_user(ifr->ifr_data, config,
@@ -2127,11 +2115,10 @@ static int axienet_get_ts_config(struct axienet_local *lp, struct ifreq *ifr)
 /* Ioctl MII Interface */
 static int axienet_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 #if defined (CONFIG_XILINX_AXI_EMAC_HWTSTAMP) || defined (CONFIG_XILINX_TSN_PTP)
 	struct axienet_local *lp = netdev_priv(dev);
 #endif
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (!netif_running(dev))
 		return -EINVAL;
 
@@ -2198,7 +2185,6 @@ static const struct net_device_ops axienet_netdev_ops = {
 static void axienet_ethtools_get_drvinfo(struct net_device *ndev,
 					 struct ethtool_drvinfo *ed)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	strlcpy(ed->driver, DRIVER_NAME, sizeof(ed->driver));
 	strlcpy(ed->version, DRIVER_VERSION, sizeof(ed->version));
 }
@@ -2231,11 +2217,11 @@ static int axienet_ethtools_get_regs_len(struct net_device *ndev)
 static void axienet_ethtools_get_regs(struct net_device *ndev,
 				      struct ethtool_regs *regs, void *ret)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 *data = (u32 *)ret;
 	size_t len = sizeof(u32) * AXIENET_REGS_N;
 	struct axienet_local *lp = netdev_priv(ndev);
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	regs->version = 0;
 	regs->len = len;
 
@@ -2287,10 +2273,9 @@ static void
 axienet_ethtools_get_pauseparam(struct net_device *ndev,
 				struct ethtool_pauseparam *epauseparm)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 regval;
 	struct axienet_local *lp = netdev_priv(ndev);
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	epauseparm->autoneg  = 0;
 	regval = axienet_ior(lp, XAE_FCC_OFFSET);
 	epauseparm->tx_pause = regval & XAE_FCC_FCTX_MASK;
@@ -2313,10 +2298,10 @@ static int
 axienet_ethtools_set_pauseparam(struct net_device *ndev,
 				struct ethtool_pauseparam *epauseparm)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 regval = 0;
 	struct axienet_local *lp = netdev_priv(ndev);
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (netif_running(ndev)) {
 		netdev_err(ndev,
 			   "Please stop netif before applying configuration\n");
@@ -2351,12 +2336,12 @@ axienet_ethtools_set_pauseparam(struct net_device *ndev,
 static int axienet_ethtools_get_coalesce(struct net_device *ndev,
 					 struct ethtool_coalesce *ecoalesce)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	u32 regval = 0;
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct axienet_dma_q *q;
 	int i;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	for_each_rx_dma_queue(lp, i) {
 		q = lp->dq[i];
 
@@ -2389,9 +2374,9 @@ static int axienet_ethtools_get_coalesce(struct net_device *ndev,
 static int axienet_ethtools_set_coalesce(struct net_device *ndev,
 					 struct ethtool_coalesce *ecoalesce)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct axienet_local *lp = netdev_priv(ndev);
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (netif_running(ndev)) {
 		netdev_err(ndev,
 			   "Please stop netif before applying configuration\n");
@@ -2480,13 +2465,13 @@ static int __maybe_unused axienet_mcdma_probe(struct platform_device *pdev,
 					      struct axienet_local *lp,
 					      struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int i, ret = 0;
 	struct axienet_dma_q *q;
 	struct device_node *np;
 	struct resource dmares;
 	const char *str;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	ret = of_property_count_strings(pdev->dev.of_node, "xlnx,channel-ids");
 	if (ret < 0)
 		return -EINVAL;
@@ -2535,7 +2520,6 @@ static int __maybe_unused axienet_mcdma_probe(struct platform_device *pdev,
 static int __maybe_unused axienet_dma_probe(struct platform_device *pdev,
 					    struct net_device *ndev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int i, ret;
 	struct axienet_local *lp = netdev_priv(ndev);
 	struct axienet_dma_q *q;
@@ -2544,7 +2528,7 @@ static int __maybe_unused axienet_dma_probe(struct platform_device *pdev,
 #ifdef CONFIG_XILINX_TSN
 	char dma_name[10];
 #endif
-
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	for_each_rx_dma_queue(lp, i) {
 		q = kmalloc(sizeof(*q), GFP_KERNEL);
 
@@ -2683,7 +2667,6 @@ MODULE_DEVICE_TABLE(of, axienet_of_match);
  */
 static int axienet_probe(struct platform_device *pdev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	int ret = 0;
 #ifdef CONFIG_XILINX_AXI_EMAC_HWTSTAMP
 	struct device_node *np;
@@ -2697,6 +2680,7 @@ static int axienet_probe(struct platform_device *pdev)
 	bool slave = false;
 	bool is_tsn = false;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	is_tsn = of_property_read_bool(pdev->dev.of_node, "xlnx,tsn");
 	ret = of_property_read_u16(pdev->dev.of_node, "xlnx,num-queues",
 				   &num_queues);
@@ -3053,11 +3037,11 @@ free_netdev:
 
 static int axienet_remove(struct platform_device *pdev)
 {
-	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct axienet_local *lp = netdev_priv(ndev);
 	int i;
 
+	dev_info(&pdev->dev, "%s: Begin Func\n", __func__);
 	if (lp->mii_bus)
 		axienet_mdio_teardown(lp);
 
