@@ -946,6 +946,9 @@ static inline u32 axienet_ior(struct axienet_local *lp, off_t offset)
 static inline void axienet_iow(struct axienet_local *lp, off_t offset,
 			       u32 value)
 {
+    dev_info(lp->dev, "In <axienet_iow>: Func Called!\n");
+    dev_info(lp->dev, "In <axienet_iow>: offset=<%X>!\n",offset);
+    dev_info(lp->dev, "In <axienet_iow>: value=<%X>!\n",value);
 	out_be32((lp->regs + offset), value);
 }
 

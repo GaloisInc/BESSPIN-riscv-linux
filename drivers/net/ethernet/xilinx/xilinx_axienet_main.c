@@ -216,6 +216,7 @@ static int axienet_dma_bd_init(struct net_device *ndev)
 void axienet_set_mac_address(struct net_device *ndev, const void *address)
 {
 	struct axienet_local *lp = netdev_priv(ndev);
+	int i;
 	dev_info(&ndev->dev, "%s: Begin Func\n", __func__);
 	if (address) {
 		ether_addr_copy(ndev->dev_addr, address);
@@ -240,7 +241,11 @@ void axienet_set_mac_address(struct net_device *ndev, const void *address)
 		}
 
 	dev_info(&ndev->dev, "In <axienet_set_mac_address>: Before axienet_iow...\n");
-	dev_info(&ndev->dev, "In <axienet_set_mac_address>: dev_addr = <%s>\n",ndev->dev_addr);
+	dev_info(&ndev->dev, "In <axienet_set_mac_address>: dev_addr(s) = <%s>\n",ndev->dev_addr);
+	dev_info(&ndev->dev, "In <axienet_set_mac_address>: dev_addr(X) = <%X>\n",ndev->dev_addr);
+	for (i=0;i<6;i++) {
+		dev_info(&ndev->dev, "In <axienet_set_mac_address>: dev_addr[%d] = <%X>\n",i,ndev->dev_addr[i]);
+	}
 	
 	/* Set up unicast MAC address filter set its mac address */
 	axienet_iow(lp, XAE_UAW0_OFFSET,
