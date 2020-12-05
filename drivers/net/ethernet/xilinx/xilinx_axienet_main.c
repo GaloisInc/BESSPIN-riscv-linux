@@ -230,14 +230,14 @@ void axienet_set_mac_address(struct net_device *ndev, const void *address)
 	} else {
 		dev_info(&ndev->dev, "In <axienet_set_mac_address>: else(is_valid_ether_addr)\n");
 	}
-
+	/*
 	if (lp->axienet_config->mactype != XAXIENET_1G &&
 	    lp->axienet_config->mactype != XAXIENET_2_5G)
 		{	
 			dev_info(&ndev->dev, "In <axienet_set_mac_address>: After if(lp->) --> return \n");
 			return;
 		}
-
+	*/
 	/* Set up unicast MAC address filter set its mac address */
 	axienet_iow(lp, XAE_UAW0_OFFSET,
 		    (ndev->dev_addr[0]) |
